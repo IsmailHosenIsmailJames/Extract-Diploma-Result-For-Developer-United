@@ -12,9 +12,6 @@ cred = credentials.Certificate(
 firebase_admin.initialize_app(
     cred, {'databaseURL': "https://developersunited-default-rtdb.asia-southeast1.firebasedatabase.app/"})
 
-
-# Open the Json file
-# ------------------------------------------------
 # get json file name
 def getFileName(extension: str) -> tuple:
     print("/nLooking for PDF files...")
@@ -130,104 +127,26 @@ def openJsonFileResult(fileName: str) -> dict:
         }
 
 
-# def openJsonFileCollageResult(fileName: str) -> dict:
-#     print("We need Important Information about this file. Provide this information...")
-#     # Collect the required information and cheak is the infomation validated
-#     providan = int(input("Enter Providan : "))
-#     if (providan != 2016 and providan != 2022):
-#         print("Providan sould be 2016 or 2022")
-#         return None
-#     semester = int(input("Enter Semester : "))
-#     if (semester > 8 or semester < 1):
-#         print("Semester must between 1-8")
-#         return None
-#     examYear = int(input("Enter year when exam was held : "))
-#     if (examYear < 2016 and examYear > 2023):
-#         print("Cheak the code again  : ")
-#         return None
-    
-#     # init the data
-#     resultFinal = dict()
-
-#     with open(fileName, "r") as jsonFile:
-#         data = json.load(jsonFile)
-
-#         for collage in data:
-#             collageResult = data[collage]
-#             totalStudent = len(collageResult)
-#             totalPoint = 0
-#             passed = 0
-#             refered = 0
-#             drop = 0
-#             for roll in collageResult:
-                
-#                 if (collageResult[roll]['pass'] == True):
-#                     totalPoint += float(collageResult[roll]['result'])
-#                     passed += 1
-#                 else:
-#                     failed = collageResult[roll]['failed']
-#                     if (len(failed) < 4):
-#                         refered += 1
-#                     else:
-#                         drop += 1
-                        
-#             if(passed != 0):
-#                 avaragePoint = totalPoint/passed
-#             else:
-#                 avaragePoint = 0
-#             passRate = passed/totalStudent
-#             collageFinalData = {
-#                 f'{semester}':
-#                     {
-#                         "resultData": collageResult,
-#                         'data': {
-#                             "providan": providan,
-#                             "semester": semester,
-#                             "avaragePoint": avaragePoint,
-#                             "passRate": passRate,
-#                             "totalStudent": totalStudent,
-#                             "passed": passed,
-#                             "refered": refered,
-#                             "droped": drop,
-#                             "passRate": passRate,
-#                             "examYear": examYear,
-#                         }
-#                     }
-#             }
-#             resultFinal[collage] = collageFinalData
-#             resultFinal['providan'] = providan
-            
-#         return resultFinal
-            
-
-
 # Uloade on firebase
-def uploadeOnFirebase(dataDict: dict) -> bool:
+def uploadeOnFirebase(dataDict: dict) -> dict:
     """It will uploade json files on firebase
 
     Args:
         data (dict): result data with aditional information
 
     Returns:
-        bool: if uploade succfull, return True. Else false
+        dict: if uploade succfull, return the dict that is uploaded. Else None
     """
     semester = dataDict["data"]['semester']
     totalStudent = dataDict["data"]['totalStudent']
     counter = 0
     print("Getting the data from Realtime database...")
     probidan = dataDict['data']['providan']
-    ref = db.reference(f'/result//{probidan}/')
-    isPreviouslyDataPresent = False
-    mainData = dict()
-    try:
-        mainData = dict(ref.get())
-        isPreviouslyDataPresent = True
-    except:
-        isPreviouslyDataPresent = False
-        print("No data found previously...")
+    refResult = db.reference(f'/result/personal/{probidan}/')
+    mainData = dict(refResult.get())
         
     print("Inserting data...")
-    if(isPreviouslyDataPresent):
+    if(mainData != None):
         for roll in dataDict['resultData']:
             try:
                 singleData = mainData[roll]
@@ -242,14 +161,14 @@ def uploadeOnFirebase(dataDict: dict) -> bool:
 
     try:
         print("Uploading modified data...")
-        ref.set(mainData)
+        refResult.set(mainData)
         print("Uploding some info of result of semester ...")
-        ref = db.reference(f'/result/info/{probidan}/{semester}')
-        ref.set(dataDict['data'])
+        refInfo = db.reference(f'/result/info/{probidan}/{semester}')
+        refInfo.set(dataDict['data'])
         print("Done all process")
-        return True
+        return mainData
     except:
-        False
+        return None
         
 
 fileName = getFileName("json")
@@ -259,11 +178,12 @@ dataDictResult = openJsonFileResult(
     fileName=fileName)
 
 if (dataDictResult != None):
-    with open("Uploaded Json file.json", 'w') as file:
-        json.dump(dataDictResult, file, indent= 2,sort_keys= True)
     
-    result = uploadeOnFirebase(dataDictResult)
-    if(result == True):
+    uploadedData = uploadeOnFirebase(dataDictResult)
+    if(uploadedData != None):
+        with open("Uploaded Json file.json", 'w') as file:
+            json.dump(uploadedData, file, indent= 2,sort_keys= True)
+
         print("Successfully Done all the task....")
     else:
         print("There have some error in process...")
