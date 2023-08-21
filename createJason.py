@@ -156,13 +156,13 @@ def extractInstituteResult(fileName:str) -> tuple:
 
 
 # function for select a PDF file
-def getFileName() -> str:
+def getFileName(extension:str) -> str:
     print("\nLooking for PDF files...")
     
     listOfAllFiles =  os.listdir()
     pdfNameFiles = []
     for fileName in listOfAllFiles:
-        if(fileName.endswith(".pdf")):
+        if(fileName.endswith(f".{extension.lower()}")):
             pdfNameFiles.append(fileName)
             
     print(f'We found {len(pdfNameFiles)} pdf files.')
@@ -184,7 +184,7 @@ def getFileName() -> str:
     
         
 # Call and get selected file name
-fileName = getFileName()
+fileName = getFileName("pdf")
 
 if(fileName != None):
     print("\nExtracting Information From Data...\n")
